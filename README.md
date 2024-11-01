@@ -45,5 +45,5 @@ Un bouton "Rejouer" apparaît à la fin du jeu pour démarrer une nouvelle parti
 Sites three.js :https://threejs.org/
 Sites avec de nombreux exemples (recommandés) :https://threejs.org/examples/#webgl_animation_keyframes
 tuto : https://florian-gouloubi.medium.com/tutoriel-three-js-9fceee4baa54
-https://www.youtube.com/watch?v=vhK6o26OV4Q
+--  https://www.youtube.com/watch?v=vhK6o26OV4Q
 chatgpt aide à la correction, explication et commentaire
