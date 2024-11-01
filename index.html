@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Jeu WebGL avec Three.js</title>
+    <link rel="stylesheet" href="style.css"> <!-- Lien vers la feuille de style CSS pour le design de la page -->
+
+    <!-- Importation des modules Three.js -->
+    <script type="importmap">
+        {
+          "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+          }
+        }
+    </script>
+</head>
+<body>
+    <!-- BARRE SUPÉRIEURE POUR LES INFOS DU JEU -->
+    <div id="top-bar">
+        <div class="row">
+            <div class="column left">
+                <div id="maxScore">Score maximum : 0</div> <!-- Zone d'affichage du score maximum -->
+                <div id="timer">Temps restant : 60s</div> <!-- Zone d'affichage du temps restant -->
+            </div>
+            <div class="column center">
+                <div id="score">Score: 0</div> <!-- Zone d'affichage du score actuel -->
+            </div>
+            <div class="column right">
+                <button id="replayButton" style="display: none;">Rejouer</button> <!-- Bouton pour relancer le jeu -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Script principal du jeu -->
+    <script type="module">
+        // Importation des modules de Three.js
+        import * as THREE from 'three';
+        import { RGBELoader } from '/node_modules/three/examples/jsm/loaders/RGBELoader.js'; // Chargeur de texture HDR
+        import { OBJLoader } from 'three/addons/loaders/OBJLoader.js'; // Chargeur de modèles OBJ
+
+        // INITIALISATION DE LA SCÈNE
+        const scene = new THREE.Scene(); // Création de la scène principale
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000); // Caméra avec champ de vision de 75°
+
+        // Rendu de la scène
+        const renderer = new THREE.WebGLRenderer({ antialias: true }); // Création du moteur de rendu WebGL avec anti-aliasing
+        renderer.setSize(window.innerWidth, window.innerHeight); // Ajustement de la taille du rendu à la fenêtre
+        renderer.toneMapping = THREE.ACESFilmicToneMapping; // Application d'un mapping de tons pour améliorer le rendu des couleurs
+        renderer.toneMappingExposure = 0.6; // Réglage de l'exposition pour contrôler la luminosité
+        renderer.outputEncoding = THREE.sRGBEncoding; // Encodage en sRGB pour des couleurs plus précises
+        document.body.appendChild(renderer.domElement); // Ajout du rendu dans le document HTML
+
+        // CHARGEMENT DE LA TEXTURE EN FOND
+        const pngTextureLoader = new THREE.TextureLoader(); // Création d'un chargeur de texture
+        pngTextureLoader.load('fond_halloween3.png', function (texture) {
+            scene.background = texture; // Définition de l'image comme arrière-plan de la scène
+        }, undefined, function (err) {
+            console.error("Erreur lors du chargement de la texture PNG : ", err); // Message d'erreur si la texture échoue à se charger
+        });
+
+        // LUMIÈRE DANS LA SCÈNE
+        renderer.shadowMap.enabled = true; // Activation des ombres
+        const light = new THREE.DirectionalLight("#ffffff", 1.2); // Lumière directionnelle avec une intensité de 1.2
+        light.position.set(5, 5, 5).normalize(); // Positionnement de la lumière et normalisation pour un effet réaliste
+        light.castShadow = true; // Activation de la projection d'ombre par cette lumière
+        scene.add(light); // Ajout de la lumière dans la scène
+        const ambientLight = new THREE.AmbientLight("#ff2e35", 0.4); // Lumière ambiante avec une couleur rougeâtre et faible intensité
+        scene.add(ambientLight); // Ajout de la lumière ambiante
+
+        // CHARGEMENT DU MODÈLE OBJ
+        let model;
+        const objLoader = new OBJLoader(); // Initialisation du chargeur de modèles OBJ
+        objLoader.load('citrouille.obj', (loadedModel) => {
+            loadedModel.rotation.y = THREE.MathUtils.degToRad(200); // Rotation du modèle à 200 degrés autour de l'axe Y
+            loadedModel.traverse((child) => {
+                if (child instanceof THREE.Mesh) { // Application des matériaux uniquement sur les maillages
+                    child.material = new THREE.MeshPhongMaterial({
+                        color: 0xffa500, // Couleur orange du modèle
+                        shininess: 10, // Brillance du modèle
+                        side: THREE.FrontSide // Application du matériau sur le côté avant
+                    });
+                    child.castShadow = true; // Activation de l'ombre
+                    child.receiveShadow = true; // Réception des ombres
+                    child.geometry.center(); // Centrage du modèle autour de son origine
+                }
+            });
+            model = loadedModel; // Assignation du modèle chargé
+            model.scale.set(0.5, 0.5, 0.5); // Réduction de l'échelle du modèle
+            scene.add(model); // Ajout du modèle à la scène
+        });
+
+        // POSITION DE LA CAMÉRA
+        camera.position.z = 8; // Positionnement de la caméra en retrait pour voir le modèle
+
+        // VARIABLES DE JEU
+        let score = 0; // Score actuel
+        let maxScore = 0; // Score maximum atteint
+        let gameOver = false; // État de la partie
+        let countdown = 60; // Temps initial du compte à rebours
+        let countdownInterval; // Intervalle pour la mise à jour du timer
+
+        // ÉLÉMENTS DOM
+        const scoreElement = document.getElementById("score"); // Élément pour afficher le score actuel
+        const timerElement = document.getElementById("timer"); // Élément pour afficher le temps restant
+        const maxScoreElement = document.getElementById("maxScore"); // Élément pour afficher le score maximum
+        const replayButton = document.getElementById("replayButton"); // Bouton pour relancer le jeu
+        replayButton.addEventListener("click", startGame); // Écoute du clic sur le bouton pour démarrer le jeu
+
+        // POSITIONNEMENT DU MODÈLE
+        function repositionModel() {
+            if (model) {
+                // Positionnement aléatoire du modèle dans l'espace
+                model.position.x = (Math.random() - 0.5) * 10;
+                model.position.y = (Math.random() - 0.5) * 5;
+                model.position.z = (Math.random() - 0.5) * 5;
+            }
+        }
+
+        // DÉMARRER LE JEU
+        function startGame() {
+            score = 0; // Réinitialisation du score
+            gameOver = false; // Remise en état actif du jeu
+            countdown = 60; // Remise à 60 secondes du timer
+            scoreElement.innerText = `Score: ${score}`; // Affichage du score initial
+            timerElement.innerText = `Temps restant : ${countdown}s`; // Affichage du timer initial
+            replayButton.style.display = "none"; // Masquer le bouton de relance
+            clearInterval(countdownInterval); // Réinitialisation de l'intervalle du timer
+            countdownInterval = setInterval(updateTimer, 1000); // Mise à jour du timer chaque seconde
+            repositionModel(); // Positionnement initial du modèle
+            animate(); // Lancement de l'animation
+        }
+
+        // MISE À JOUR DU TIMER
+        function updateTimer() {
+            countdown--; // Décrémenter le timer
+            timerElement.innerText = `Temps restant : ${countdown}s`; // Mise à jour de l'affichage du timer
+            if (countdown <= 0) { // Si le temps est écoulé
+                endGame(); // Terminer le jeu
+            }
+        }
+
+        // TERMINER LE JEU
+        function endGame() {
+            gameOver = true; // Passage en mode "jeu terminé"
+            clearInterval(countdownInterval); // Arrêter le timer
+            if (score > maxScore) {
+                maxScore = score; // Mise à jour du score max si atteint
+                maxScoreElement.innerText = `Score maximum : ${maxScore}`; // Affichage du nouveau score max
+            }
+            scoreElement.innerText = `Jeu terminé ! Score final : ${score}`; // Affichage du message de fin de jeu
+            replayButton.style.display = "block"; // Afficher le bouton de relance
+        }
+
+        // GÉRER LE CLIC SUR LE MODÈLE
+        window.addEventListener("click", (event) => {
+            if (!gameOver && model) {
+                const mouse = new THREE.Vector2(
+                    (event.clientX / window.innerWidth) * 2 -1,
+                    -((event.clientY - document.getElementById('top-bar').clientHeight) / window.innerHeight) * 2 + 1
+                );
+                const raycaster = new THREE.Raycaster(); // Création d'un rayon pour détecter les objets
+                raycaster.setFromCamera(mouse, camera); // Définit l'origine et la direction du rayon en fonction de la position de la caméra et de la souris
+                const intersects = raycaster.intersectObject(model, true); // Vérifie si le rayon intersecte le modèle
+                if (intersects.length > 0) { // Si le modèle est touché par le clic
+                    score++; // Augmenter le score
+                    scoreElement.innerText = `Score: ${score}`; // Mettre à jour l'affichage du score
+                    repositionModel(); // Repositionner le modèle pour une nouvelle cible
+                }
+            }
+        });
+
+        // GÉRER LE REDIMENSIONNEMENT DE LA FENÊTRE
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight; // Mise à jour du ratio de la caméra
+            camera.updateProjectionMatrix(); // Mise à jour de la matrice de projection de la caméra
+            renderer.setSize(window.innerWidth, window.innerHeight); // Ajustement de la taille du rendu
+        });
+
+        // FONCTION D'ANIMATION
+        function animate() {
+            if (!gameOver) { // Continue l'animation tant que le jeu est actif
+                requestAnimationFrame(animate); // Demande une nouvelle image
+                if (model && camera) {
+                    model.lookAt(camera.position); // Oriente le modèle vers la caméra
+                    model.rotateY(Math.PI); // Fait pivoter le modèle de 180° pour l'orienter correctement
+                }
+                renderer.render(scene, camera); // Rend l'image à la caméra
+            }
+        }
+
+        // DÉMARRER LE JEU AU CHARGEMENT DE LA PAGE
+        startGame(); // Lance le jeu dès le chargement de la page
+    </script>
+</body>
+</html>

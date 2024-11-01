@@ -1,0 +1,65 @@
+body {
+    margin: 0;
+}
+
+canvas {
+    display: block;
+}
+
+#top-bar {
+    position: relative;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 55px; /* Hauteur de la barre */
+    background-color: rgba(100, 100, 100, 0.7); /* Couleur de fond gris transparent */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    z-index: 10; /* Assurez-vous que la barre est au-dessus du canvas */
+    user-select: none; /* Empêche la sélection de texte */
+}
+
+#score {
+    font-size: 50px; /* Taille de police pour le score */
+    color: white; /* Couleur du texte du score */
+    flex-grow: 1; /* Prend l'espace disponible pour centrer */
+    text-align: center; /* Centre le score */
+}
+
+#timer, #maxScore {
+    font-size: 25px; /* Taille de police pour le timer et le score max */
+    color: white; /* Couleur du texte */
+}
+
+#replayButton {
+    padding: 10px 20px; /* Espacement du bouton */
+    z-index: 11; 
+}
+
+.row {
+    display: flex;
+    width: 100%;
+}
+
+.column {
+    padding: 10px; /* Espacement à l'intérieur des colonnes */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.column.left {
+    flex: 1; /* Occupe l'espace disponible à gauche */
+    align-items: flex-start; /* Alignement à gauche */
+}
+
+.column.center {
+    flex: 1; /* Occupe l'espace disponible au centre */
+}
+
+.column.right {
+    padding: -20px;
+    flex: 1; /* Occupe l'espace disponible à droite */
+    align-items: flex-end; /* Alignement à droite */
+}
