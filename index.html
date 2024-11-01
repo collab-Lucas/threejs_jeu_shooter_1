@@ -4,14 +4,13 @@
     <meta charset="UTF-8">
     <title>Jeu WebGL avec Three.js</title>
     <link rel="stylesheet" href="style.css"> <!-- Lien vers la feuille de style CSS pour le design de la page -->
-
-    <!-- Importation des modules Three.js -->
     <script type="importmap">
         {
-          "imports": {
-            "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
-            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
-          }
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+                "RGBELoader":"https://cdn.jsdelivr.net/npm/three/examples/jsm/loaders/RGBELoader.js",
+                "OBJLoader":"https://cdn.jsdelivr.net/npm/three/examples/jsm/loaders/OBJLoader.js"
+            }
         }
     </script>
 </head>
@@ -34,11 +33,14 @@
 
     <!-- Script principal du jeu -->
     <script type="module">
-        // Importation des modules de Three.js
         import * as THREE from 'three';
+        import { RGBELoader } from 'RGBELoader';
+        import { OBJLoader } from 'OBJLoader';
+        // Importation des modules de Three.js
+        /*import * as THREE from 'three';
         import { RGBELoader } from '/node_modules/three/examples/jsm/loaders/RGBELoader.js'; // Chargeur de texture HDR
         import { OBJLoader } from 'three/addons/loaders/OBJLoader.js'; // Chargeur de modèles OBJ
-
+        */
         // INITIALISATION DE LA SCÈNE
         const scene = new THREE.Scene(); // Création de la scène principale
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000); // Caméra avec champ de vision de 75°
